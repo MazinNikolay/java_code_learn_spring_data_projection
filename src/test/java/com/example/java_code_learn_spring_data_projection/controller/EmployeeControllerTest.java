@@ -1,23 +1,20 @@
 package com.example.java_code_learn_spring_data_projection.controller;
 
+import com.example.java_code_learn_spring_data_projection.dto.DepartmentDto;
 import com.example.java_code_learn_spring_data_projection.dto.EmployeeDto;
-import com.example.java_code_learn_spring_data_projection.model.Department;
-import com.example.java_code_learn_spring_data_projection.model.Employee;
-import com.example.java_code_learn_spring_data_projection.projection.EmployeeProjection;
-import com.example.java_code_learn_spring_data_projection.service.impl.EmployeeServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-@WebMvcTest(EmployeeController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class EmployeeControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
@@ -25,100 +22,78 @@ class EmployeeControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private EmployeeServiceImpl employeeService;
-
-    private Employee employee;
-    private Department department;
-    private EmployeeDto dto;
-    private EmployeeProjection projection;
+    private EmployeeDto employeeDto;
+    private DepartmentDto departmentDto;
 
     @BeforeEach
     void setUp() {
-        department = Department.builder()
-                .id(1L)
-                .name("dept name")
-                .build();
-        employee = Employee.builder()
-                .id(1L)
-                .firstName("employee first name")
-                .lastName("employee last name")
-                .position("position")
-                .salary(40.0)
-                .department(department)
-                .build();
-        dto = EmployeeDto.builder()
-                .firstName("dto first name")
-                .lastName("dto last name")
+        employeeDto = EmployeeDto.builder()
+                .firstName("dto firstname")
+                .lastName("dto lastname")
                 .salary(45.0)
                 .position("dto position")
                 .departmentId(1l)
                 .build();
+        departmentDto = DepartmentDto.builder()
+                .name("dto name")
+                .build();
     }
 
     @Test
+    @Order(2)
     void getEmployee() throws Exception {
-        Mockito.when(employeeService.getEmployee(Mockito.anyLong())).thenReturn(employee);
         mockMvc.perform(MockMvcRequestBuilders.get("/app/employee/1"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.firstName")
-                        .value("employee first name"));
+                        .value("dto firstname"));
     }
 
     @Test
+    @Order(1)
     void createEmployee() throws Exception {
-        String json = objectMapper.writeValueAsString(dto);
-        Mockito.when(employeeService.createEmployee(Mockito.any(EmployeeDto.class)))
-                .thenReturn(employee);
+        String jsonEmployee = objectMapper.writeValueAsString(employeeDto);
+        String jsonDepartment = objectMapper.writeValueAsString(departmentDto);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/app/department")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonDepartment))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name")
+                        .value("dto name"));
         mockMvc.perform(MockMvcRequestBuilders.post("/app/employee")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(jsonEmployee))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.firstName")
-                        .value("employee first name"));
+                        .value("dto firstname"));
     }
 
     @Test
+    @Order(4)
     void updateEmployee() throws Exception {
-        String json = objectMapper.writeValueAsString(dto);
-        Mockito.when(employeeService.updateEmployee(Mockito.anyLong(), Mockito.any(EmployeeDto.class)))
-                .thenReturn(employee);
+        employeeDto.setFirstName("updated firstname");
+        String json = objectMapper.writeValueAsString(employeeDto);
         mockMvc.perform(MockMvcRequestBuilders.put("/app/employee/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.firstName")
-                        .value("employee first name"));
+                        .value("updated firstname"));
     }
 
     @Test
+    @Order(5)
     void deleteEmployee() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.delete("/app/employee/1"))
                 .andExpect(MockMvcResultMatchers.status().isNoContent());
     }
 
     @Test
+    @Order(3)
     void getEmployeeProjection() throws Exception {
-        projection = new EmployeeProjection() {
-            @Override
-            public String getFullName() {
-                return "projection name";
-            }
-
-            @Override
-            public String getPosition() {
-                return "projection position";
-            }
-
-            @Override
-            public String getDepartmentName() {
-                return "projection dept";
-            }
-        };
-        Mockito.when(employeeService.getEmployeeProjection(Mockito.anyLong())).thenReturn(projection);
         mockMvc.perform(MockMvcRequestBuilders.get("/app/employee/projection/1"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.fullName")
-                        .value("projection name"));
+                        .value("dto firstname dto lastname"));
     }
 }
