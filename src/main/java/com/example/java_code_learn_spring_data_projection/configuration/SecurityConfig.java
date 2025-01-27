@@ -17,7 +17,8 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/app/employee")
                         .permitAll()
-                        .requestMatchers("/app/employee/**", "/app/department")
+                        .requestMatchers("/app/employee/**",
+                                "/app/department/**")
                         .authenticated())
                 .httpBasic(Customizer.withDefaults());
         return http.build();
@@ -26,9 +27,8 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         var userDetailsManager = new InMemoryUserDetailsManager();
-        UserDetails user = User.builder()
-                .username("user")
-                .password("password")
+        UserDetails user = User.withUsername("user")
+                .password("{noop}password")
                 .roles("USER")
                 .build();
         userDetailsManager.createUser(user);
